@@ -106,6 +106,21 @@ fn insertar(nodo_opt: Option<Box<Nodo>>, vuelo: Vuelo) -> Box<Nodo> {
     nodo
 }
 
+fn buscar_vuelo(nodo: &Option<Box<Nodo>>, altitud: u32) -> Option<&Vuelo> {
+    match nodo {
+        None => None,
+        Some(n) => {
+            if altitud == n.vuelo.altitud {
+                Some(&n.vuelo)
+            } else if altitud < n.vuelo.altitud {
+                buscar_vuelo(&n.izquierdo, altitud)
+            } else {
+                buscar_vuelo(&n.derecho, altitud)
+            }
+        }
+    }
+}
+
 fn main() {
     let mut radar: Option<Box<Nodo>> = None;
     
@@ -122,5 +137,10 @@ fn main() {
 
     println!("--- Radar de Control Aéreo (AVL) ---");
     // Aquí el estudiante debe invocar sus funciones de búsqueda y eliminación
+    if let Some(vuelo) = buscar_vuelo(&radar, 3500) {
+        println!("Vuelo encontrado: {}", vuelo.id);
+    } else {
+        println!("Vuelo no encontrado");
+    }
 }
 
