@@ -121,6 +121,67 @@ fn buscar_vuelo(nodo: &Option<Box<Nodo>>, altitud: u32) -> Option<&Vuelo> {
     }
 }
 
+fn eliminar_vuelo(nodo_opt: Option<Box<Nodo>>, altitud: u32) -> Option<Box<Nodo>> {
+    let mut nodo = match nodo_opt {
+        None => return None,
+        Some(n) => n,
+    };
+
+    if altitud < nodo.vuelo.altitud {
+        nodo.izquierdo = eliminar_vuelo(nodo.izquierdo.take(), altitud);
+    } else if altitud > nodo.vuelo.altitud {
+        nodo.derecho = eliminar_vuelo(nodo.derecho.take(), altitud);
+    } else {
+        // Encontramos el vuelo a eliminar (Aterrizaje)
+        if nodo.izquierdo.is_none() {
+            return nodo.derecho.take(); // Caso 1 y 2: Sin hijos o solo hijo derecho
+        } else if nodo.derecho.is_none() {
+            return nodo.izquierdo.take(); // Caso 2: Solo hijo izquierdo
+        }
+
+        // Caso 3: Tiene dos hijos. Buscamos el sucesor in-orden (menor del lado derecho)
+        let mut temp = nodo.derecho.as_ref().unwrap();
+        while temp.izquierdo.is_some() {
+            temp = temp.izquierdo.as_ref().unwrap();
+        }
+        let vuelo_sucesor = temp.vuelo.clone();
+        
+        // Reemplazamos los datos con los del sucesor
+        nodo.vuelo = vuelo_sucesor.clone();
+        // Eliminamos el nodo duplicado del subárbol derecho
+        nodo.derecho = eliminar_vuelo(nodo.derecho.take(), vuelo_sucesor.altitud);
+    }
+
+    // Actualizamos la altura del nodo actual
+    actualizar_altura(&mut nodo);
+
+    // Revisamos si el árbol se desbalanceó
+    let balance = obtener_balance(&nodo);
+
+    // Caso Izquierda-Izquierda
+    if balance > 1 && obtener_balance(nodo.izquierdo.as_ref().unwrap()) >= 0 {
+        return Some(rotar_derecha(nodo));
+    }
+    // Caso Izquierda-Derecha
+    if balance > 1 && obtener_balance(nodo.izquierdo.as_ref().unwrap()) < 0 {
+        let hijo_izq = nodo.izquierdo.take().unwrap();
+        nodo.izquierdo = Some(rotar_izquierda(hijo_izq));
+        return Some(rotar_derecha(nodo));
+    }
+    // Caso Derecha-Derecha
+    if balance < -1 && obtener_balance(nodo.derecho.as_ref().unwrap()) <= 0 {
+        return Some(rotar_izquierda(nodo));
+    }
+    // Caso Derecha-Izquierda
+    if balance < -1 && obtener_balance(nodo.derecho.as_ref().unwrap()) > 0 {
+        let hijo_der = nodo.derecho.take().unwrap();
+        nodo.derecho = Some(rotar_derecha(hijo_der));
+        return Some(rotar_izquierda(nodo));
+    }
+
+    Some(nodo)
+}
+
 fn main() {
     let mut radar: Option<Box<Nodo>> = None;
     
@@ -141,6 +202,16 @@ fn main() {
         println!("Vuelo encontrado: {}", vuelo.id);
     } else {
         println!("Vuelo no encontrado");
+    }
+
+    // --- Prueba de la Fase 3: Aterrizaje de Vuelos ---
+    println!("\nIniciando maniobra de aterrizaje para el vuelo a 3000 pies...");
+    radar = eliminar_vuelo(radar.take(), 3000);
+    
+    if let Some(vuelo) = buscar_vuelo(&radar, 3000) {
+        println!("Error: El vuelo {} sigue en el radar.", vuelo.id);
+    } else {
+        println!("Aterrizaje exitoso. Vuelo a 3000 pies eliminado del radar.");
     }
 }
 
