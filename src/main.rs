@@ -182,6 +182,24 @@ fn eliminar_vuelo(nodo_opt: Option<Box<Nodo>>, altitud: u32) -> Option<Box<Nodo>
     Some(nodo)
 }
 
+fn estadisticas_radar(nodo: &Option<Box<Nodo>>) -> (i32, Option<u32>, Option<u32>) {
+    match nodo {
+        None => (0, None, None),
+        Some(n) => {
+            let (izq_total, izq_min, _) = estadisticas_radar(&n.izquierdo);
+            let (der_total, _, der_max) = estadisticas_radar(&n.derecho);
+
+            let total_vuelos = 1 + izq_total + der_total;
+            
+            // En un AVL, el mínimo está a la izquierda y el máximo a la derecha
+            let min_altitud = izq_min.or(Some(n.vuelo.altitud));
+            let max_altitud = der_max.or(Some(n.vuelo.altitud));
+
+            (total_vuelos, min_altitud, max_altitud)
+        }
+    }
+}
+
 fn main() {
     let mut radar: Option<Box<Nodo>> = None;
     
@@ -213,5 +231,12 @@ fn main() {
     } else {
         println!("Aterrizaje exitoso. Vuelo a 3000 pies eliminado del radar.");
     }
+
+    // --- Prueba de la Fase 4: Estadísticas del Radar ---
+    let (total, min_alt, max_alt) = estadisticas_radar(&radar);
+    println!("\n--- Reporte Final del Radar ---");
+    println!("Total de vuelos activos: {}", total);
+    if let Some(min) = min_alt { println!("Altitud mínima registrada: {} pies", min); }
+    if let Some(max) = max_alt { println!("Altitud máxima registrada: {} pies", max); }
 }
 
